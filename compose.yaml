@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: sagasu_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sagasu_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  maven:
+    image: maven:3.9-eclipse-temurin-17
+    profiles: ["tools"]
+    working_dir: /workspace
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sagasu_db
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - .:/workspace
+      - maven_cache:/root/.m2
+    command: ["mvn", "--batch-mode", "clean", "verify"]
+
+volumes:
+  postgres_data:
+  maven_cache:
