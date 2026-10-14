@@ -9,10 +9,20 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sagasu_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    hikari:
+      connection-init-sql: SET search_path TO sagasu, public
+  flyway:
+    default-schema: sagasu
+    schemas: sagasu
+    create-schemas: true
+    baseline-on-migrate: false
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: sagasu
 
 server:
   port: ${SERVER_PORT:8080}

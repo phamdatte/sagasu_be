@@ -18,8 +18,10 @@ also included.
   Spring Security's default login protects these endpoints: username `user`,
   password printed in the startup log as `Using generated security password`.
   This password changes at startup and is separate from the database password.
-- Flyway migrations belong in `src/main/resources/db/migration`, using names such
-  as `V1__create_users.sql`. No application migration has been added yet.
+- Flyway applies `V1__initial_sagasu_schema.sql` on first startup, creating the
+  17 application tables, functions, triggers, and views in schema `sagasu`.
+  Database `sagasu_db` and schema `sagasu` are different: Compose creates the
+  database; Flyway creates the schema. JDBC and Hibernate use schema `sagasu`.
   Hibernate validates the schema; Flyway owns schema changes. Existing nonempty
   schemas without Flyway history need a deliberate baseline before migrations
   can run. Do not delete existing data to bypass that check.
@@ -130,7 +132,7 @@ business endpoints yet. To run the packaged application, start PostgreSQL first:
 
 ```sh
 docker compose up -d --wait postgres
-java -jar target/sagasu-be-0.0.1-SNAPSHOT.jar
+java "-Duser.timezone=UTC" -jar target/sagasu-be-0.0.1-SNAPSHOT.jar
 ```
 
 Spring Boot excludes development-time Compose support from the packaged JAR.
@@ -156,6 +158,13 @@ Compose management because Docker is managed from the host.
 - **Unsupported Java/class-file version:** check the project SDK, Maven importer,
   and Maven runner all use JDK 17. `JAVA_HOME` controls terminal runs; run
   `.\mvnw.cmd -version` (Windows) or `sh ./mvnw -version` (macOS/Linux) to check.
+- **Lombok `ExceptionInInitializerError` / `com.sun.tools.javac.tree.EndPosTable`:**
+  this occurs with the project's Lombok version when compiling with JDK 27.
+  Select JDK 17 in **Project Structure > Project > SDK**, use **Project SDK**
+  under **Modules > Dependencies**, and use the project JDK for Maven importing
+  and running. Reload Maven and rebuild. A supported JDK 21 compiler also works
+  with the project's Java 17 target; changing target bytecode alone does not
+  change the JDK used by IntelliJ's compiler.
 - **Port 5432 already allocated:** stop the other local PostgreSQL/container,
   or change the Compose mapping to `127.0.0.1:5433:5432`. During development,
   Spring Boot discovers the mapped port automatically. Packaged JARs need
@@ -164,6 +173,12 @@ Compose management because Docker is managed from the host.
   in the run configuration's environment variables.
 - **Compose file not found:** set the run configuration's working directory to
   the folder containing `pom.xml` and `compose.yaml`.
+- **Invalid PostgreSQL timezone such as `Asia/Saigon`:** the shared IntelliJ run
+  configuration and Maven run goal use UTC, and `SagasuApplication.main` sets
+  UTC before Spring Boot initializes any database connections. This also covers
+  IntelliJ-generated run configurations. Rebuild/restart if you see the error
+  from older compiled classes. Display local times explicitly in the UI using
+  a canonical zone such as `Asia/Ho_Chi_Minh`.
 - **Dependency/download failure:** check internet access and your team's
   proxy/Maven mirror settings, then reload Maven.
 - **Authentication fails after changing credentials:** an existing PostgreSQL
@@ -177,8 +192,11 @@ Compose management because Docker is managed from the host.
 
 ## Files to share with the team
 
+For versioning, schema setup, and claim service integration, see
+[Database migrations and workflow rules](docs/database-migrations.md).
+
 Commit/share `pom.xml`, `src/`, `compose.yaml`, `mvnw`, `mvnw.cmd`, `.mvn/`,
-`.run/`, `.gitattributes`, `.gitignore`, and this README. `.idea/` and `target/`
+`.run/`, `docs/`, `.gitattributes`, `.gitignore`, and this README. `.idea/` and `target/`
 are ignored because they contain local IDE settings and generated build files.
 
 References: [Spring Boot Compose support](https://docs.spring.io/spring-boot/reference/features/dev-services.html),
